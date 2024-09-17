@@ -3,17 +3,16 @@ import { User } from "../models/user.js";
 
 export const createComment = async (req, res) => {
   try {
-    const { content, postId } = req.body;
-    const userId = req.user._id; // Assuming you have user authentication middleware
+    const { content, postId, userId } = req.body;
+    // const userId = req.user._id; // Assuming you have user authentication middleware
 
     // Validate input
-    if (!content || !postId) {
+    if (!content || !postId || !userId) {
       return res
         .status(400)
         .json({ message: "Content and postId are required" });
     }
     const username = await User.findById(userId).select("username");
-    console.log(username);
     // Create the comment
     const comment = new Comment({
       content,
@@ -63,7 +62,6 @@ export const deleteComment = async (req, res) => {
     // });
 
     res.status(200).json({ message: "Comment deleted successfully" });
-    
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

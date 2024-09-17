@@ -80,7 +80,7 @@ const PostView = () => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URI}/api/getcomments/${id}`);
       setComments(response.data.comments || []);
-      console.log(response)
+  
     } catch (error) {
       console.error(error);
     }
@@ -89,7 +89,7 @@ const PostView = () => {
   const deleteComment = async (id) => {
     try {
       const response = await axios.delete(`${import.meta.env.VITE_BACKEND_URI}/api/deletecomment/${id}`, { withCredentials: true });
-      console.log(response);
+      
       if (response.status === 200 && response.data.message === "Comment deleted successfully") {
         toast.success(response.data.message);
         fetchComments();
@@ -114,14 +114,18 @@ const PostView = () => {
     }
 
     try {
-      await axios.post(`${import.meta.env.VITE_BACKEND_URI}/api/comments`, {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URI}/api/comments`, {
         content: newComment,
         postId: id,
+        userId: decodedToken._id
       });
+      if (res.status === 201) toast.success('Comment created successfully');
       setNewComment('');
       fetchComments();
+
     } catch (error) {
       console.error(error);
+      toast.error('Failed to create comment.');
     }
   };
 
