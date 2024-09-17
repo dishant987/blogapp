@@ -168,7 +168,7 @@ export const replyComment = async (req, res) => {
 
 export const replyCommentDelete = async (req, res) => {
   try {
-    const { replycommentId, commentId } = req.params;
+    const { replyId, commentId } = req.params;
 
     // Find the comment and remove the reply
     const comment = await Comment.findById(commentId);
@@ -177,7 +177,7 @@ export const replyCommentDelete = async (req, res) => {
     }
 
     comment.replies = comment.replies.filter(
-      (reply) => reply._id.toString() !== replycommentId
+      (reply) => reply._id.toString() !== replyId
     );
     await comment.save();
 

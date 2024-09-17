@@ -28,7 +28,7 @@ router.route("/deletecomment/:commentId").delete(deleteComment);
 router.route("/updatecomment").put(editComment);
 router.route("/comments/like").put(likeComment);
 router.route("/comments/:commentId/reply").post(replyComment);
-router.route("/comments/:commentId/reply/:replyId").post(replyCommentDelete);
+router.route("/comments/:commentId/reply/:replyId").delete(replyCommentDelete);
 router
   .route("/edituserpost")
   .put(upload.single("file"), controller.editUserPost);

@@ -217,7 +217,7 @@ const PostView = () => {
             key={comment._id}
             comment={comment}
             onLike={likeComment}
-            onDislike={(commentId) => console.log(`Dislike comment ${commentId}`)}
+            
             onReply={fetchComments}
             onDelete={deleteComment}
             onEdit={editComment}

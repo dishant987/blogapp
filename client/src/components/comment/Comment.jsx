@@ -8,7 +8,7 @@ import { decodeToken } from '../../utils/decode';
 import toast from 'react-hot-toast';
 import moment from 'moment';
 
-const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
+const Comment = ({ comment, onLike, onReply, onEdit, onDelete }) => {
   const { mode } = useTheme();
   const [replyContent, setReplyContent] = useState('');
   const [cookies] = useCookies(['accessToken']);
@@ -39,15 +39,22 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
         content: replyContent,
         replierId: userId,
         recipientId: comment.author,
-      });
+      })
+      console.log(res)
+      if (res.status === 201 && res.data.message === "Reply added successfully") {
 
-      onReply(); // Refresh or perform any action after reply submission
-      setReplyContent(''); // Clear the reply input
-      setShowReplyBox(false); // Close the reply box
+        toast.success(res.data.message);
+
+
+        onReply(); // Refresh or perform any action after reply submission
+        setReplyContent(''); // Clear the reply input
+        setShowReplyBox(false); // Close the reply box
+      }
     } catch (error) {
       console.error('Error submitting reply:', error);
+      toast.error('Error submitting reply. Please try again.');
     }
-  };
+  }
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -81,7 +88,7 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
         userId,
       });
 
-      if (res.status === 200) {
+      if (res.status === 200 || res.data.message === "Comment liked successfully") {
         toast.success(res.data.message);
         onLike();
       }
@@ -126,9 +133,20 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
     }
   };
 
-  const handleReplyDelete = (replyId) => {
+  const handleReplyDelete = async (replyId) => {
     // Implement delete reply functionality
-    
+    try {
+      const res = await axios.delete(`${import.meta.env.VITE_BACKEND_URI}/api/comments/${comment._id}/reply/${replyId}`);
+      console.log(res.data)
+      if (res.status === 200 && res.data.message === "Reply deleted successfully") {
+        toast.success(res.data.message);
+      }
+      onReply();
+    } catch (error) {
+      console.error('Error deleting reply:', error);
+      toast.error('Error deleting reply. Please try again.');
+
+    }
     handleReplyMenuClose(replyId);
   };
 
