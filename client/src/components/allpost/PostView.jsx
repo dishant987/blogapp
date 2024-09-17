@@ -117,7 +117,7 @@ const PostView = () => {
       await axios.post(`${import.meta.env.VITE_BACKEND_URI}/api/comments`, {
         content: newComment,
         postId: id,
-      }, { withCredentials: true });
+      });
       setNewComment('');
       fetchComments();
     } catch (error) {
