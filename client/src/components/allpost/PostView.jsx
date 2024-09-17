@@ -80,16 +80,21 @@ const PostView = () => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URI}/api/getcomments/${id}`);
       setComments(response.data.comments || []);
-  
+
     } catch (error) {
       console.error(error);
     }
   };
 
+
+  const editComment = () => {
+    fetchComments();
+  }
+
   const deleteComment = async (id) => {
     try {
       const response = await axios.delete(`${import.meta.env.VITE_BACKEND_URI}/api/deletecomment/${id}`, { withCredentials: true });
-      
+
       if (response.status === 200 && response.data.message === "Comment deleted successfully") {
         toast.success(response.data.message);
         fetchComments();
@@ -208,6 +213,7 @@ const PostView = () => {
             onDislike={(commentId) => console.log(`Dislike comment ${commentId}`)}
             onReply={fetchComments}
             onDelete={deleteComment}
+            onEdit={editComment}
           />
         ))}
       </Box>

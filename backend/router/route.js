@@ -5,6 +5,7 @@ import upload from "../helper/upload.js";
 import {
   createComment,
   deleteComment,
+  editComment,
   getComments,
 } from "../controller/comment.js";
 const router = Router();
@@ -21,6 +22,7 @@ router.route("/deletepost").delete(controller.deletePost);
 router.route("/comments").post(createComment);
 router.route("/getcomments/:postId").get(getComments);
 router.route("/deletecomment/:commentId").delete(deleteComment);
+router.route("/updatecomment").put(editComment);
 router
   .route("/edituserpost")
   .put(upload.single("file"), controller.editUserPost);

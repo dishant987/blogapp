@@ -66,3 +66,25 @@ export const deleteComment = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+export const editComment = async (req, res) => {
+  try {
+    const { commentId, content } = req.body;
+    const comments = await Comment.findOneAndUpdate(
+      { _id: commentId },
+      { content: content }
+    );
+
+    if (!comments) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    // Update the post to remove the deleted comment
+    // await Post.findByIdAndUpdate(postId, {
+    //   $pull: { comments: commentId },
+    // });
+
+    res.status(200).json({ message: "Comment updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

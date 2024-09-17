@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Typography, IconButton, TextField, Button, Divider, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, Typography, IconButton, TextField, Button, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import { ThumbUp, ThumbDown, Reply, MoreVert, Edit, Delete } from '@mui/icons-material';
 import axios from 'axios';
 import { useTheme } from '../Themecontext';
 import { useCookies } from 'react-cookie';
 import { decodeToken } from '../../utils/decode';
+import toast from 'react-hot-toast';
 
 const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
   const { mode } = useTheme();
@@ -12,8 +13,10 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
   const [cookies] = useCookies(['accessToken']);
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null); // For menu positioning
-  const open = Boolean(anchorEl);
+  const [isEditing, setIsEditing] = useState(false); // To toggle between editing and viewing
+  const [editedContent, setEditedContent] = useState(comment.content); // Track edited content
 
+  const open = Boolean(anchorEl);
   const userId = decodeToken(cookies.accessToken)._id;
 
   const handleReplyChange = (e) => {
@@ -42,8 +45,30 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
   };
 
   const handleEdit = () => {
-    onEdit(comment._id);
+    setIsEditing(true); // Switch to edit mode
     handleMenuClose();
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editedContent.trim()) return; // Prevent empty edits
+
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URI}/api/updatecomment`, { content: editedContent, commentId: comment._id });
+      if (res.status === 200 || res.data.message === "Comment updated successfully") {
+        toast.success(res.data.message);
+
+      }
+      onEdit(comment._id); // Trigger refresh or appropriate action
+      setIsEditing(false); // Exit edit mode
+    } catch (error) {
+      console.error('Error updating comment:', error);
+      toast.error('Error updating comment. Please try again.');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false); // Cancel editing
+    setEditedContent(comment.content); // Reset content to original
   };
 
   const handleDelete = () => {
@@ -65,7 +90,7 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
       {/* More options button at the top right */}
       {userId === comment.author && (
         <IconButton
-          aria-label="more"
+          aria-label="more options"
           aria-haspopup="true"
           onClick={handleMenuOpen}
           sx={{
@@ -107,25 +132,53 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
       <Typography variant="body1" sx={{ fontWeight: 'bold', marginBottom: '8px' }}>
         {comment.authorname}
       </Typography>
-      <Typography variant="body1" sx={{ marginBottom: '12px' }}>
-        {comment.content}
-      </Typography>
+
+      {/* Editable Text Field for Editing */}
+      {isEditing ? (
+        <>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            value={editedContent}
+            onChange={(e) => setEditedContent(e.target.value)}
+            sx={{
+              marginBottom: '8px',
+              backgroundColor: mode === 'dark' ? '#3c3c3c' : '#ffffff',
+              borderRadius: '8px',
+            }}
+          />
+          <Box sx={{ display: 'flex', gap: '8px' }}>
+            <Button variant="contained" color="primary" onClick={handleSaveEdit}>
+              Save
+            </Button>
+            <Button variant="outlined" color="secondary" onClick={handleCancelEdit}>
+              Cancel
+            </Button>
+          </Box>
+        </>
+      ) : (
+        <Typography variant="body1" sx={{ marginBottom: '12px' }}>
+          {comment.content}
+        </Typography>
+      )}
 
       {/* Action Buttons */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <IconButton onClick={() => onLike(comment._id)} color="primary">
+        <IconButton aria-label="like" onClick={() => onLike(comment._id)} color="primary">
           <ThumbUp />
         </IconButton>
         <Typography variant="body2" sx={{ marginRight: '8px' }}>
           {comment.likeCount || 0}
         </Typography>
-        <IconButton onClick={() => onDislike(comment._id)} color="secondary">
+        <IconButton aria-label="dislike" onClick={() => onDislike(comment._id)} color="secondary">
           <ThumbDown />
         </IconButton>
         <IconButton
-          // onClick={() => setShowReplyBox(!showReplyBox)}
-
-          color="default">
+          aria-label="reply"
+          onClick={() => setShowReplyBox(!showReplyBox)}
+          color="default"
+        >
           <Reply />
         </IconButton>
       </Box>
@@ -146,9 +199,7 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
               borderRadius: '8px',
             }}
           />
-          <Button variant="contained" color="primary"
-            onClick={handleReplySubmit}
-          >
+          <Button variant="contained" color="primary" onClick={handleReplySubmit}>
             Reply
           </Button>
         </Box>
