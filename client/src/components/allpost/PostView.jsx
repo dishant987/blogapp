@@ -93,7 +93,7 @@ const PostView = () => {
 
   const deleteComment = async (id) => {
     try {
-      const response = await axios.delete(`${import.meta.env.VITE_BACKEND_URI}/api/deletecomment/${id}`, { withCredentials: true });
+      const response = await axios.delete(`${import.meta.env.VITE_BACKEND_URI}/api/deletecomment/${id}`);
 
       if (response.status === 200 && response.data.message === "Comment deleted successfully") {
         toast.success(response.data.message);
