@@ -8,6 +8,8 @@ import {
   editComment,
   getComments,
   likeComment,
+  replyComment,
+  replyCommentDelete,
 } from "../controller/comment.js";
 const router = Router();
 
@@ -25,6 +27,8 @@ router.route("/getcomments/:postId").get(getComments);
 router.route("/deletecomment/:commentId").delete(deleteComment);
 router.route("/updatecomment").put(editComment);
 router.route("/comments/like").put(likeComment);
+router.route("/comments/:commentId/reply").post(replyComment);
+router.route("/comments/:commentId/reply/:replyId").post(replyCommentDelete);
 router
   .route("/edituserpost")
   .put(upload.single("file"), controller.editUserPost);

@@ -16,7 +16,9 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
   const [anchorEl, setAnchorEl] = useState(null); // For menu positioning
   const [isEditing, setIsEditing] = useState(false); // To toggle between editing and viewing
   const [editedContent, setEditedContent] = useState(comment.content); // Track edited content
-
+  const [repliesToShow, setRepliesToShow] = useState(3); // Number of replies to show
+  const [showMoreReplies, setShowMoreReplies] = useState(true); // To handle showing more replies
+  const [replyMenus, setReplyMenus] = useState({}); // For reply menu positioning
   const open = Boolean(anchorEl);
   const userId = cookies.accessToken ? decodeToken(cookies.accessToken)?._id : null;
 
@@ -24,11 +26,21 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
     setReplyContent(e.target.value);
   };
 
-  const handleReplySubmit = async () => {
+  const handleReplySubmit = async (commentId) => {
     if (!replyContent.trim()) return; // Prevent empty replies
 
+    if (!userId) {
+      toast.error('You must be logged in to reply to comment.');
+      return;
+    }
+
     try {
-      await axios.post(`${import.meta.env.VITE_BACKEND_URI}/api/comments/${comment._id}/reply`, { content: replyContent });
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URI}/api/comments/${commentId}/reply`, {
+        content: replyContent,
+        replierId: userId,
+        recipientId: comment.author,
+      });
+
       onReply(); // Refresh or perform any action after reply submission
       setReplyContent(''); // Clear the reply input
       setShowReplyBox(false); // Close the reply box
@@ -45,11 +57,18 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
     setAnchorEl(null);
   };
 
-  const handleEdit = () => {
-    setIsEditing(true); // Switch to edit mode
-    handleMenuClose();
+  const handleReplyMenuOpen = (event, replyId) => {
+    setReplyMenus((prev) => ({ ...prev, [replyId]: event.currentTarget }));
   };
 
+  const handleReplyMenuClose = (replyId) => {
+    setReplyMenus((prev) => ({ ...prev, [replyId]: null }));
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+    handleMenuClose();
+  };
 
   const handleLike = async (commentId) => {
     if (!userId) {
@@ -64,7 +83,7 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
 
       if (res.status === 200) {
         toast.success(res.data.message);
-        onLike(); // Refresh the comments to update like count
+        onLike();
       }
     } catch (error) {
       console.error("Error liking comment:", error);
@@ -73,16 +92,15 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
   };
 
   const handleSaveEdit = async () => {
-    if (!editedContent.trim()) return; // Prevent empty edits
+    if (!editedContent.trim()) return;
 
     try {
       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URI}/api/updatecomment`, { content: editedContent, commentId: comment._id });
       if (res.status === 200 || res.data.message === "Comment updated successfully") {
         toast.success(res.data.message);
-
       }
-      onEdit(comment._id); // Trigger refresh or appropriate action
-      setIsEditing(false); // Exit edit mode
+      onEdit(comment._id);
+      setIsEditing(false);
     } catch (error) {
       console.error('Error updating comment:', error);
       toast.error('Error updating comment. Please try again.');
@@ -90,13 +108,28 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
   };
 
   const handleCancelEdit = () => {
-    setIsEditing(false); // Cancel editing
-    setEditedContent(comment.content); // Reset content to original
+    setIsEditing(false);
+    setEditedContent(comment.content);
   };
 
   const handleDelete = () => {
     onDelete(comment._id);
     handleMenuClose();
+  };
+
+  const handleShowMoreReplies = () => {
+    if (repliesToShow + 3 >= comment.replies.length) {
+      setRepliesToShow(comment.replies.length);
+      setShowMoreReplies(false);
+    } else {
+      setRepliesToShow(repliesToShow + 3);
+    }
+  };
+
+  const handleReplyDelete = (replyId) => {
+    // Implement delete reply functionality
+    
+    handleReplyMenuClose(replyId);
   };
 
   return (
@@ -107,7 +140,7 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
         marginBottom: '16px',
         backgroundColor: mode === 'dark' ? '#2c2c2c' : '#f9f9f9',
         color: mode === 'dark' ? '#f0f0f0' : '#000000',
-        position: 'relative', // Add relative positioning for the container
+        position: 'relative',
       }}
     >
       {/* More options button at the top right */}
@@ -118,8 +151,8 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
           onClick={handleMenuOpen}
           sx={{
             position: 'absolute',
-            top: '8px', // Adjust for desired vertical position
-            right: '8px', // Adjust for desired horizontal position
+            top: '8px',
+            right: '8px',
           }}
         >
           <MoreVert />
@@ -129,10 +162,10 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
       {/* Menu for MoreVert Button */}
       <Menu
         anchorEl={anchorEl}
-        open={open}
+        open={Boolean(anchorEl)}
         onClose={handleMenuClose}
         sx={{
-          maxHeight: 48 * 4.5, // Optional: customize height
+          maxHeight: 48 * 4.5,
           width: '20ch',
           borderRadius: '30px',
         }}
@@ -168,8 +201,6 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
           &#x2022; {moment(comment.createdAt).fromNow()}
         </span>
       </Typography>
-
-
 
       {/* Editable Text Field for Editing */}
       {isEditing ? (
@@ -209,59 +240,114 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
         <Typography variant="body2" sx={{ marginRight: '8px' }}>
           {comment.likes.length || 0}
         </Typography>
-        <IconButton aria-label="dislike" onClick={() => onDislike(comment._id)} color="secondary">
-          <ThumbDown />
-        </IconButton>
+
         <IconButton
           aria-label="reply"
-          // onClick={() => setShowReplyBox(!showReplyBox)}
+          onClick={() => setShowReplyBox(!showReplyBox)}
           color="default"
         >
           <Reply />
         </IconButton>
       </Box>
 
-      {/* Reply Input Box */}
+      {/* Reply Box */}
       {showReplyBox && (
         <Box sx={{ marginTop: '16px' }}>
           <TextField
             fullWidth
             multiline
             rows={3}
+            placeholder="Write a reply..."
             value={replyContent}
             onChange={handleReplyChange}
-            placeholder="Write a reply..."
             sx={{
               marginBottom: '8px',
               backgroundColor: mode === 'dark' ? '#3c3c3c' : '#ffffff',
               borderRadius: '8px',
             }}
           />
-          <Button variant="contained" color="primary" onClick={handleReplySubmit}>
+          <Button variant="contained" color="primary" onClick={() => handleReplySubmit(comment._id)}>
             Reply
           </Button>
         </Box>
       )}
 
-      {/* Divider between comment and replies */}
-      {comment.replies && comment.replies.length > 0 && <Divider sx={{ marginY: '16px' }} />}
-
-      {/* Replies Section */}
-      {comment.replies?.map((reply) => (
+      {/* Replies */}
+      {comment.replies && comment.replies.slice(0, repliesToShow).map((reply) => (
         <Box
           key={reply._id}
           sx={{
-            padding: '8px 16px',
+            padding: '12px',
+            margin: '8px',
             marginTop: '8px',
+            marginLeft: '48px',
             borderRadius: '8px',
-            backgroundColor: mode === 'dark' ? '#3c3c3c' : '#f0f0f0',
+            backgroundColor: mode === 'dark' ? '#3c3c3c' : '#eaeaea',
+            marginBottom: '8px',
+            position: 'relative',
           }}
         >
-          <Typography variant="body2" sx={{ color: mode === 'dark' ? '#f0f0f0' : '#000' }}>
-            {reply.content}
+          <IconButton
+            aria-label="more options"
+            aria-haspopup="true"
+            onClick={(e) => handleReplyMenuOpen(e, reply._id)}
+            sx={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+            }}
+          >
+            <MoreVert />
+          </IconButton>
+
+          <Menu
+            anchorEl={replyMenus[reply._id]}
+            open={Boolean(replyMenus[reply._id])}
+            onClose={() => handleReplyMenuClose(reply._id)}
+            sx={{
+              maxHeight: 48 * 4.5,
+              width: '20ch',
+              borderRadius: '30px',
+            }}
+          >
+            <MenuItem onClick={() => handleReplyDelete(reply._id)}>
+              <ListItemIcon>
+                <Delete fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Delete</ListItemText>
+            </MenuItem>
+          </Menu>
+
+          <Typography
+            variant="body2"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontWeight: 'bold',
+              marginBottom: '4px',
+              color: mode === 'dark' ? '#f0f0f0' : '#000000',
+            }}
+          >
+            {reply.replyAuthorName}&nbsp;
+            <span style={{ fontWeight: 'normal', color: 'gray', fontSize: '0.8rem' }}>
+              &#x2022; {moment(reply.createdAt).fromNow()}
+            </span>
           </Typography>
+          <Typography variant="body2" sx={{ color: mode === 'dark' ? '#f0f0f0' : '#000' }}>
+            <span style={{ color: mode === 'dark' ? 'skyblue' : '#000' }}>@{reply.mentionedUserName}</span> &nbsp;&nbsp; {reply.content}
+          </Typography>
+
+
         </Box>
       ))}
+
+      {/* Show more replies button */}
+      {showMoreReplies && comment.replies.length > repliesToShow && (
+        <Button onClick={handleShowMoreReplies} sx={{ marginTop: '8px' }}>
+          Show more replies
+        </Button>
+      )}
     </Box>
   );
 };

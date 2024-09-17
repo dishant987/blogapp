@@ -221,7 +221,7 @@ const PostView = () => {
             onReply={fetchComments}
             onDelete={deleteComment}
             onEdit={editComment}
-
+          
           />
         ))}
       </Box>

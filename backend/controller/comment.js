@@ -114,12 +114,74 @@ export const likeComment = async (req, res) => {
     // Save the comment
     await comment.save();
 
-    res
-      .status(200)
-      .json({
-        message: hasLiked ? "Like removed" : "Liked",
-        likes: comment.likes.length,
+    res.status(200).json({
+      message: hasLiked ? "Like removed" : "Liked",
+      likes: comment.likes.length,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const replyComment = async (req, res) => {
+  try {
+    const { content, replierId, recipientId } = req.body;
+    const { commentId } = req.params;
+
+    // Validate input
+    if (!content || !replierId || !commentId || !recipientId) {
+      return res.status(400).json({
+        message: "Content, replierId, commentId and recipientId are required",
       });
+    }
+
+    // Get author details
+    const user = await User.findById(replierId).select("username");
+    const mentionedUser = recipientId
+      ? await User.findById(recipientId).select("username")
+      : null;
+
+    // Create the reply
+    const reply = {
+      content,
+      replyAuthorId: replierId,
+      replyAuthorName: user.username,
+      mentionedUserId: recipientId || null,
+      mentionedUserName: mentionedUser ? mentionedUser.username : null,
+      createdAt: new Date(),
+    };
+
+    // Find the comment and add the reply
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    comment.replies.push(reply);
+    await comment.save();
+
+    res.status(201).json({ message: "Reply added successfully", reply });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const replyCommentDelete = async (req, res) => {
+  try {
+    const { replycommentId, commentId } = req.params;
+
+    // Find the comment and remove the reply
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    comment.replies = comment.replies.filter(
+      (reply) => reply._id.toString() !== replycommentId
+    );
+    await comment.save();
+
+    res.status(200).json({ message: "Reply deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
