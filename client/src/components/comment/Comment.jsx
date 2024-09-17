@@ -6,6 +6,7 @@ import { useTheme } from '../Themecontext';
 import { useCookies } from 'react-cookie';
 import { decodeToken } from '../../utils/decode';
 import toast from 'react-hot-toast';
+import moment from 'moment';
 
 const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
   const { mode } = useTheme();
@@ -17,7 +18,7 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
   const [editedContent, setEditedContent] = useState(comment.content); // Track edited content
 
   const open = Boolean(anchorEl);
-  const userId = decodeToken(cookies.accessToken)._id;
+  const userId = cookies.accessToken ? decodeToken(cookies.accessToken)?._id : null;
 
   const handleReplyChange = (e) => {
     setReplyContent(e.target.value);
@@ -47,6 +48,28 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
   const handleEdit = () => {
     setIsEditing(true); // Switch to edit mode
     handleMenuClose();
+  };
+
+
+  const handleLike = async (commentId) => {
+    if (!userId) {
+      toast.error('You must be logged in to like comment.');
+      return;
+    }
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URI}/api/comments/like`, {
+        commentId,
+        userId,
+      });
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        onLike(); // Refresh the comments to update like count
+      }
+    } catch (error) {
+      console.error("Error liking comment:", error);
+      toast.error("Error liking comment. Please try again.");
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -129,9 +152,24 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
       </Menu>
 
       {/* Comment Author and Content */}
-      <Typography variant="body1" sx={{ fontWeight: 'bold', marginBottom: '8px' }}>
+      <Typography
+        variant="body1"
+        sx={{
+          fontWeight: 'bold',
+          marginBottom: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          color: mode === 'dark' ? '#f0f0f0' : '#000000',
+        }}
+      >
         {comment.authorname}
+        <span style={{ fontWeight: 'normal', color: 'gray', fontSize: '0.9rem' }}>
+          &#x2022; {moment(comment.createdAt).fromNow()}
+        </span>
       </Typography>
+
+
 
       {/* Editable Text Field for Editing */}
       {isEditing ? (
@@ -165,18 +203,18 @@ const Comment = ({ comment, onLike, onDislike, onReply, onEdit, onDelete }) => {
 
       {/* Action Buttons */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <IconButton aria-label="like" onClick={() => onLike(comment._id)} color="primary">
+        <IconButton aria-label="like" onClick={() => handleLike(comment._id)} color="primary">
           <ThumbUp />
         </IconButton>
         <Typography variant="body2" sx={{ marginRight: '8px' }}>
-          {comment.likeCount || 0}
+          {comment.likes.length || 0}
         </Typography>
         <IconButton aria-label="dislike" onClick={() => onDislike(comment._id)} color="secondary">
           <ThumbDown />
         </IconButton>
         <IconButton
           aria-label="reply"
-          onClick={() => setShowReplyBox(!showReplyBox)}
+          // onClick={() => setShowReplyBox(!showReplyBox)}
           color="default"
         >
           <Reply />

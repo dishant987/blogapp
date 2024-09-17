@@ -88,3 +88,39 @@ export const editComment = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const likeComment = async (req, res) => {
+  try {
+    const { commentId, userId } = req.body;
+
+    // Find the comment
+    const comment = await Comment.findById(commentId);
+
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    // Check if the user has already liked the comment
+    const hasLiked = comment.likes.includes(userId);
+
+    if (hasLiked) {
+      // If already liked, remove the like
+      comment.likes = comment.likes.filter((id) => id.toString() !== userId);
+    } else {
+      // If not liked, add the like
+      comment.likes.push(userId);
+    }
+
+    // Save the comment
+    await comment.save();
+
+    res
+      .status(200)
+      .json({
+        message: hasLiked ? "Like removed" : "Liked",
+        likes: comment.likes.length,
+      });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

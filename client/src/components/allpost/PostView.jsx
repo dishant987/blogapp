@@ -67,6 +67,9 @@ const PostView = () => {
   const { mode } = useTheme();
   const [cookies] = useCookies(['accessToken']);
 
+  const accessToken = cookies.accessToken;
+  const decodedToken = decodeToken(accessToken);
+
   const fetchData = async () => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URI}/api/singlepost/${id}`);
@@ -90,6 +93,9 @@ const PostView = () => {
   const editComment = () => {
     fetchComments();
   }
+  const likeComment = () => {
+    fetchComments();
+  }
 
   const deleteComment = async (id) => {
     try {
@@ -104,14 +110,15 @@ const PostView = () => {
     }
   };
 
+
+
   useEffect(() => {
     fetchData();
     fetchComments();
   }, [id]);
 
   const handleCommentSubmit = async () => {
-    const accessToken = cookies.accessToken;
-    const decodedToken = decodeToken(accessToken);
+
 
     if (!decodedToken) {
       toast.error('You must be logged in to comment.');
@@ -209,11 +216,12 @@ const PostView = () => {
           <Comment
             key={comment._id}
             comment={comment}
-            onLike={(commentId) => console.log(`Like comment ${commentId}`)}
+            onLike={likeComment}
             onDislike={(commentId) => console.log(`Dislike comment ${commentId}`)}
             onReply={fetchComments}
             onDelete={deleteComment}
             onEdit={editComment}
+
           />
         ))}
       </Box>
